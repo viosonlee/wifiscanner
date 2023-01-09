@@ -1,8 +1,11 @@
 package com.laiyifen.lyfwifiscanner
 
 import android.Manifest
+import android.app.Dialog
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.DialogInterface
+import android.content.DialogInterface.OnClickListener
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -15,10 +18,13 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.app.DialogCompat
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
 import com.laiyifen.lyfwifiscanner.databinding.ActivityMainBinding
 import com.wifimanagerwrapper.WifiManagerWrapper
@@ -88,6 +94,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        binding.stopScanButton.setOnClickListener {
+            MaterialAlertDialogBuilder(this)
+                .setTitle("注意")
+                .setMessage("退出后数据将不会被保留")
+                .setPositiveButton("知道了") { _, _ -> finish() }
+                .setNegativeButton("取消", null)
+                .show()
+        }
+
         //init list
         with(binding.record) {
             layoutManager = LinearLayoutManager(this@MainActivity)
@@ -103,19 +118,26 @@ class MainActivity : AppCompatActivity() {
     private fun startScan() {
         wifiManagerWrapper.autoWifiScanner(object : WifiScanCallbackResult {
             override fun wifiFailureResult(results: MutableList<ScanResult>) {
-                Toast.makeText(this@MainActivity, "扫描出错", Toast.LENGTH_SHORT).show()
+                addNewResult(results)
             }
 
             override fun wifiSuccessResult(results: List<ScanResult>) {
-                results.forEach { result ->
-                    if (data.find { it.BSSID == result.BSSID } == null) {
-                        //不包含的情况就需要加入进来
-                        data.add(result)
-                    }
-                }
-                resultAdapter.notifyDataSetChanged()
+                addNewResult(results)
             }
         })
+    }
+
+    private fun addNewResult(results: List<ScanResult>) {
+        val newResult = results.filter { res -> data.find { it.BSSID == res.BSSID } == null }
+        val startIndex = if (data.isEmpty()) 0 else data.size - 1
+        val itemCount = newResult.size
+        data.addAll(newResult)
+        resultAdapter.notifyItemRangeChanged(startIndex, itemCount)
+        //保持在最后一个
+        val size = data.size - 1
+        if (size > 0)
+            binding.record.smoothScrollToPosition(size)
+        Toast.makeText(this, "扫描到${itemCount}个新wifi信号", Toast.LENGTH_SHORT).show()
     }
 
     /**
@@ -134,5 +156,10 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    override fun onBackPressed() {
+        super.onBackPressed()
+        moveTaskToBack(true)
     }
 }

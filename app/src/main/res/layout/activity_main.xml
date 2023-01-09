@@ -32,7 +32,15 @@
             android:id="@+id/copyScanResult"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
             android:text="复制列表" />
+
+        <Button
+            android:id="@+id/stopScanButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="结束扫描" />
+
 
     </LinearLayout>
 
